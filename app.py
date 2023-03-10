@@ -9,9 +9,9 @@ import requests
 import markdownify
 
 def fetch(url: str) -> str:
-    cached_gigs = url.rsplit('/', 1)[-1] + ".cache"
-    # if (os.path.isfile(cached_gigs)):
-    #     return open(cached_gigs).read()
+    cached_gigs = "local/" + url.rsplit('/', 1)[-1] + ".cache"
+    if (os.path.isfile(cached_gigs)):
+        return open(cached_gigs).read()
     resp = requests.get(url)
     save(cached_gigs, resp.text)
     return resp.text
@@ -51,10 +51,16 @@ def get_organizer(location: str):
 
 def generate(gigs: list) -> Calendar:
     cal = Calendar()
-    cal.add('prodid', '-//My calendar product//mxm.dk//')
+    cal.add('prodid', '-//Andreas Bilz//NONSGML Capeet Gig Calendar//DE')
     cal.add('version', '2.0')
+    calendar_name = "Capeet Gig Calendar"
+    cal.add("name", calendar_name)
+    cal.add("X-WR-CALNAME", calendar_name)
+    cal.add("X-WR-CALDESC", "Capeet would like to remind you that circle pits run counter clockwise...")
+    cal.add("X-WR-TIMEZONE", "Europe/Vienna")
+    cal.add("X-PUBLISHED-TTL", "PT12H")
+    
     for gig in gigs:
-
         startdate = datetime.strptime(gig[0] + str(datetime.now().year), "%d.%m.%Y")
         enddate = startdate + timedelta(days=1)
         event = Event()
@@ -70,17 +76,13 @@ def generate(gigs: list) -> Calendar:
         event.add("description", extract_description(gig[1]+ gig[3]))
         cal.add_component(event)
 
-    save("gigs.ics", cal.to_ical(), True)
-
     return cal
 
 app = Flask(__name__)
 
 @app.route("/")
 def index():
-    html = fetch("http://capeet.com/gigs_list.html")
-    # html = fetch("http://capeet.com/gigs_2023.html")
-    result = parse(html)
-    # return result
-    result = generate(result)
-    return result.to_ical()
+    remoteHtml = fetch("http://capeet.com/gigs_list.html")
+    extracted_gigs = parse(remoteHtml)
+    icalendar = generate(extracted_gigs)
+    return icalendar.to_ical()
