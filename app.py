@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup, PageElement, ResultSet, Tag
 from flask import Flask
 import requests
 import markdownify
+import config
 
 def fetch(url: str) -> str:
     cached_gigs = "local/" + url.rsplit('/', 1)[-1] + ".cache"
@@ -51,7 +52,7 @@ def get_organizer(location: str):
 
 def generate(gigs: list) -> Calendar:
     cal = Calendar()
-    cal.add('prodid', '-//Andreas Bilz//NONSGML Capeet Gig Calendar//DE')
+    cal.add('prodid', '-//Deine Mudda//NONSGML Capeet Gig Calendar//DE')
     cal.add('version', '2.0')
     calendar_name = "Capeet Gig Calendar"
     cal.add("name", calendar_name)
@@ -79,10 +80,10 @@ def generate(gigs: list) -> Calendar:
     return cal
 
 app = Flask(__name__)
-
+app.config.from_object(config.Config)
 @app.route("/")
 def index():
-    remoteHtml = fetch("http://capeet.com/gigs_list.html")
+    remoteHtml = fetch(app.config["CAPEET_GIGLIST_URL"])
     extracted_gigs = parse(remoteHtml)
     icalendar = generate(extracted_gigs)
     return icalendar.to_ical()
